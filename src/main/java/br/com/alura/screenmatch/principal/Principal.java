@@ -4,7 +4,6 @@ import br.com.alura.screenmatch.model.*;
 import br.com.alura.screenmatch.repository.SerieRepository;
 import br.com.alura.screenmatch.service.ConsumoApi;
 import br.com.alura.screenmatch.service.ConverteDados;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -19,6 +18,7 @@ public class Principal {
     private List<DadosSerie> dadosSeries = new ArrayList<>();
     private SerieRepository repositorio;
     private List<Serie> series = new ArrayList<>();
+    private Optional<Serie> serieBuscada;
 
     public Principal(SerieRepository repositorio) {
         this.repositorio = repositorio;
@@ -34,10 +34,13 @@ public class Principal {
                 2 - Buscar episódios
                 3 - Listas Series Buscadas
                 4 - Procurar Serie no Banco de Dados por Título
-                5-  Buscar Séries por Ator
+                5 -  Buscar Séries por Ator
                 6 - Top 5 Séries
                 7 - Buscar séries por categoria
                 8 - Buscar series por numero de temporadas
+                9 - Buscar Episodio por Trecho
+                10 - Top 5 Episodios por Serie
+                11 - Buscar Episodios Por Data
                 0 - Sair                                 
                 """;
 
@@ -71,6 +74,15 @@ public class Principal {
                 case 8:
                     buscarSerieTemporadaMaiorEAvaliacaoMaior();
                     break;
+                case 9:
+                    buscarEpisodioPorTrecho();
+                    break;
+                case 10:
+                    top5EpisodiosPorSerie();
+                    break;
+                case 11:
+                    buscarEpisodiosPorDataSuperior();
+                    break;
                 case 0:
                     System.out.println("Saindo...");
                     break;
@@ -81,6 +93,43 @@ public class Principal {
 
     }
 
+    private void buscarEpisodiosPorDataSuperior() {
+        buscarSeriePorTitulo();
+        if (serieBuscada.isPresent())
+        {
+            Serie serie = serieBuscada.get();
+            System.out.println("Deseja procurar por episodios lançcados a partir de que ano?");
+            var anoLancamento = leitura.nextInt();
+            leitura.nextLine();
+            List<Episodio> episodiosPorAno = repositorio.episodiosPorSerieEAno(serie,anoLancamento);
+            episodiosPorAno.forEach(System.out::println);
+        }
+    }
+
+    private void top5EpisodiosPorSerie() {
+        buscarSeriePorTitulo();
+        if (serieBuscada.isPresent())
+        {
+            Serie serie = serieBuscada.get();
+            List<Episodio> topEpisodios = repositorio.topEpisodiosPorSerie(serie);
+            topEpisodios.forEach(e->
+                    System.out.printf("Serie: %s Temporada: %s - Episodio: %s - %s Avaliação: %f\n",
+                            e.getSerie().getTitulo(), e.getTemporada(),
+                            e.getNumeroEpisodio(), e.getTitulo(), e.getAvaliacao()));
+        }
+
+    }
+
+    private void buscarEpisodioPorTrecho() {
+        System.out.println("Insira o Nome ou trecho do nome do episódio para busca:");
+        var trechoEpisodio = leitura.nextLine();
+        List<Episodio> episodiosEncontrados = repositorio.episodiosPorTrecho(trechoEpisodio);
+        episodiosEncontrados.forEach(e->
+                System.out.printf("Serie: %s Temporada: %s - Episodio: %s - %s\n",
+                        e.getSerie().getTitulo(), e.getTemporada(),
+                        e.getNumeroEpisodio(), e.getTitulo()));
+    }
+
     private void buscarSerieTemporadaMaiorEAvaliacaoMaior() {
         System.out.println("Buscar Serie com numero de temporadas Maior que: ");
         int numTemp = leitura.nextInt();
@@ -88,7 +137,7 @@ public class Principal {
         System.out.println("Buscar Series com avaliacao Maior que: ");
         var avaliacao = leitura.nextDouble();
         leitura.nextLine();
-        List<Serie> seriesEncontradas = repositorio.findByTotalTemporadasGreaterThanEqualAndAvaliacaoGreaterThanEqual(numTemp, avaliacao);
+        List<Serie> seriesEncontradas = repositorio.seriesPorTemporadaEAValiacao(numTemp, avaliacao);
         seriesEncontradas.forEach(System.out::println);
     }
 
@@ -120,6 +169,7 @@ public class Principal {
         System.out.println("Escolha uma serie pelo nome:");
         var nomeSerie = leitura.nextLine();
         List<Serie> seriesBuscadas = repositorio.findByTituloContainingIgnoreCase(nomeSerie);
+        serieBuscada = seriesBuscadas.stream().findFirst();
 
         if (!seriesBuscadas.isEmpty())
         {
